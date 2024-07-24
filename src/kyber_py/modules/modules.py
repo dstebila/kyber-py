@@ -1,11 +1,26 @@
 from ..polynomials.polynomials import PolynomialRingKyber
 from .modules_generic import Module, Matrix
-
+import math
 
 class ModuleKyber(Module):
     def __init__(self):
         self.ring = PolynomialRingKyber()
         self.matrix = MatrixKyber
+
+    def gsvcompression_decode_vector(self, input_bytes, k, is_ntt=False):
+        polybytelen = math.ceil(math.log2(self.ring.q) * self.ring.n / 8)
+        if polybytelen * k != len(input_bytes):
+            raise ValueError(
+                "Byte length is the wrong length for given k value"
+            )
+
+        # Encode each chunk of bytes as a polynomial and create the vector
+        elements = [
+            self.ring.gsvcompression_decode(input_bytes[i : i + polybytelen], is_ntt=is_ntt)
+            for i in range(0, len(input_bytes), polybytelen)
+        ]
+
+        return self.vector(elements)
 
     def decode_vector(self, input_bytes, k, d, is_ntt=False):
         # Ensure the input bytes are the correct length to create k elements with
@@ -36,6 +51,13 @@ class MatrixKyber(Matrix):
         for row in self._data:
             for ele in row:
                 output += ele.encode(d)
+        return output
+
+    def gsvcompression_encode(self):
+        output = b""
+        for row in self._data:
+            for ele in row:
+                output += ele.gsvcompression_encode()
         return output
 
     def compress(self, d):

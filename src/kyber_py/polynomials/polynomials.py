@@ -1,6 +1,6 @@
 from .polynomials_generic import PolynomialRing, Polynomial
 from ..utilities.utils import bytes_to_bits, bitstring_to_bytes
-
+import math
 
 class PolynomialRingKyber(PolynomialRing):
     """
@@ -109,6 +109,14 @@ class PolynomialRingKyber(PolynomialRing):
                 idx += 1
         return self(coeffs, is_ntt=is_ntt)
 
+    def gsvcompression_decode(self, input_bytes, is_ntt=False):
+        s = int.from_bytes(input_bytes)
+        coeffs = []
+        for i in range(256):
+            coeffs.append(s % 3329)
+            s = s // 3329
+        return self(coeffs, is_ntt=is_ntt)
+
     def __call__(self, coefficients, is_ntt=False):
         if not is_ntt:
             element = self.element
@@ -135,6 +143,14 @@ class PolynomialKyber(Polynomial):
         """
         bit_string = "".join(format(c, f"0{d}b")[::-1] for c in self.coeffs)
         return bitstring_to_bytes(bit_string)
+
+    def gsvcompression_encode(self):
+        s = 0
+        assert len(self.coeffs) == 256
+        for i in range(256):
+            s += self.coeffs[i] * 3329 ** i
+        bytelen = math.ceil(math.log2(3329) * 256 / 8)
+        return s.to_bytes(bytelen)
 
     def _compress_ele(self, x, d):
         """

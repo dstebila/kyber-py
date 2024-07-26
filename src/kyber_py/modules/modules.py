@@ -9,16 +9,18 @@ class ModuleKyber(Module):
 
     def gsvcompression_decode_vector(self, input_bytes, k, is_ntt=False):
         polybytelen = math.ceil(math.log2(self.ring.q) * self.ring.n / 8)
-        if polybytelen * k != len(input_bytes):
+        matrixbytelen = math.ceil(math.log2(self.ring.q) * self.ring.n * k / 8)
+        if matrixbytelen != len(input_bytes):
             raise ValueError(
                 "Byte length is the wrong length for given k value"
             )
 
         # Encode each chunk of bytes as a polynomial and create the vector
-        elements = [
-            self.ring.gsvcompression_decode(input_bytes[i : i + polybytelen], is_ntt=is_ntt)
-            for i in range(0, len(input_bytes), polybytelen)
-        ]
+        s = int.from_bytes(input_bytes)
+        elements = []
+        for i in range(k):
+            elements.append(self.ring.gsvcompression_decode((s % (3329 ** 256)).to_bytes(polybytelen),is_ntt=is_ntt))
+            s = s // (3329 ** 256)
 
         return self.vector(elements)
 
@@ -54,11 +56,14 @@ class MatrixKyber(Matrix):
         return output
 
     def gsvcompression_encode(self):
-        output = b""
+        s = 0
+        k = 0
         for row in self._data:
             for ele in row:
-                output += ele.gsvcompression_encode()
-        return output
+                s += int.from_bytes(ele.gsvcompression_encode()) * (3329 ** (256 * k))
+                k += 1
+        bytelen = math.ceil(math.log2(3329) * 256 * len(row) / 8)
+        return s.to_bytes(bytelen)
 
     def compress(self, d):
         for row in self._data:

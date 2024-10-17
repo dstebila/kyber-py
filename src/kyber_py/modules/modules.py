@@ -23,6 +23,26 @@ class ModuleKyber(Module):
             s = s // (3329 ** 256)
 
         return self.vector(elements)
+    
+    def gsvcompression_decode_vector_fast(self, input_bytes, k, is_ntt=False):
+        matrixbytelen = math.ceil(math.log2(self.ring.q) * self.ring.n * k / 8)
+        if matrixbytelen != len(input_bytes):
+            raise ValueError(
+                "Byte length is the wrong length for given k value"
+            )
+
+        l_bytelen = self.ring.n * k
+        l = input_bytes[:l_bytelen]
+        s = int.from_bytes(input_bytes[l_bytelen:])
+        elements = []
+        for i in range(k):
+            coeffs = []
+            for j in range(256):
+                coeffs.append((s % 13)*256 + (l[j+(i*256)]))
+                s = s // 13
+            poly = PolynomialRingKyber()
+            elements.append(poly(coeffs,is_ntt=is_ntt))
+        return self.vector(elements)
 
     def decode_vector(self, input_bytes, k, d, is_ntt=False):
         # Ensure the input bytes are the correct length to create k elements with
@@ -64,6 +84,34 @@ class MatrixKyber(Matrix):
                 k += 1
         bytelen = math.ceil(math.log2(3329) * 256 * len(row) / 8)
         return s.to_bytes(bytelen)
+    
+    def gsvcompression_encode_fast(self):
+        s = 0
+        l = 0
+        k = 0
+        l = bytearray(len(self._data[0]) * 256)
+        for row in self._data:
+            for ele in row: # one ele is one polynomial
+                for i in range(256):
+                    if ele.coeffs[i] == 3328:
+                        return None
+                    s += (ele.coeffs[i] >> 8) * 13 ** (i + (k*256))
+                    l[i + (k*256)] = (ele.coeffs[i] % 256)
+                k += 1
+            # # in rejection version:
+            # # now check if msb of s is 1 and reject if so.
+            # # otherwise...
+        s_bytelen = math.ceil(math.log2(13) * 256 * len(row) / 8)
+        return l + s.to_bytes(s_bytelen)
+    
+    def kemeleon_encode(self):
+        sb = self.gsvcompression_encode()
+        s = int.from_bytes(sb)
+        bl = math.ceil(math.log2(3329) * 256 * len(self._data[0]))
+        if s >> (bl - 1) == 1:
+            return None
+        else:
+            return sb
 
     def compress(self, d):
         for row in self._data:

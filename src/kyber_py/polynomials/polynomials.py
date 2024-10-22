@@ -110,11 +110,25 @@ class PolynomialRingKyber(PolynomialRing):
         return self(coeffs, is_ntt=is_ntt)
 
     def gsvcompression_decode(self, input_bytes, is_ntt=False):
-        s = int.from_bytes(input_bytes)
+        s = int.from_bytes(input_bytes,'big')
         coeffs = []
         for i in range(256):
             coeffs.append(s % 3329)
             s = s // 3329
+        return self(coeffs, is_ntt=is_ntt)
+    
+    def gsvcompression_decode_fast(self, input_bytes, is_ntt=False):
+        l_bytelen = math.ceil(math.log2(256) * 256 / 8)
+        sbyt = input_bytes[l_bytelen:]
+        lbyt = input_bytes[:l_bytelen]
+        s = int.from_bytes(sbyt,'big')
+        l = int.from_bytes(lbyt,'big')
+
+        coeffs = []
+        for i in range(256):
+            coeffs.append((s % 13)*256 + (l & 255))
+            s = s // 13
+            l = l >> 8
         return self(coeffs, is_ntt=is_ntt)
 
     def __call__(self, coefficients, is_ntt=False):
@@ -150,7 +164,23 @@ class PolynomialKyber(Polynomial):
         for i in range(256):
             s += self.coeffs[i] * 3329 ** i
         bytelen = math.ceil(math.log2(3329) * 256 / 8)
-        return s.to_bytes(bytelen)
+        return s.to_bytes(bytelen,'big')
+    
+    def gsvcompression_encode_fast(self):
+        s = 0
+        l = 0
+        assert len(self.coeffs) == 256
+        for i in range(256):
+            if self.coeffs[i] == 3328:
+                return None
+            s += (self.coeffs[i] // 256) * 13 ** i
+            l += ((self.coeffs[i] % 256) << (8 * i))
+        # in rejection version:
+        # now check if msb of s is 1 and reject if so.
+        # otherwise...
+        s_bytelen = math.ceil(math.log2(13) * 256 / 8)
+        l_bytelen = math.ceil(math.log2(256) * 256 / 8)
+        return l.to_bytes(l_bytelen,'big') + s.to_bytes(s_bytelen,'big')
 
     def _compress_ele(self, x, d):
         """

@@ -16,10 +16,10 @@ class ModuleKyber(Module):
             )
 
         # Encode each chunk of bytes as a polynomial and create the vector
-        s = int.from_bytes(input_bytes)
+        s = int.from_bytes(input_bytes,'big')
         elements = []
         for i in range(k):
-            elements.append(self.ring.gsvcompression_decode((s % (3329 ** 256)).to_bytes(polybytelen),is_ntt=is_ntt))
+            elements.append(self.ring.gsvcompression_decode((s % (3329 ** 256)).to_bytes(polybytelen,'big'),is_ntt=is_ntt))
             s = s // (3329 ** 256)
 
         return self.vector(elements)
@@ -33,7 +33,7 @@ class ModuleKyber(Module):
 
         l_bytelen = self.ring.n * k
         # l = input_bytes[:l_bytelen]
-        s = int.from_bytes(input_bytes[l_bytelen:])
+        s = int.from_bytes(input_bytes[l_bytelen:],'big')
         elements = []
         for i in range(k):
             coeffs = []
@@ -80,10 +80,10 @@ class MatrixKyber(Matrix):
         k = 0
         for row in self._data:
             for ele in row:
-                s += int.from_bytes(ele.gsvcompression_encode()) * (3329 ** (256 * k))
+                s += int.from_bytes(ele.gsvcompression_encode(),'big') * (3329 ** (256 * k))
                 k += 1
         bytelen = math.ceil(math.log2(3329) * 256 * len(row) / 8)
-        return s.to_bytes(bytelen)
+        return s.to_bytes(bytelen,'big')
     
     def gsvcompression_encode_fast(self):
         s = 0
@@ -104,7 +104,7 @@ class MatrixKyber(Matrix):
             # # now check if msb of s is 1 and reject if so.
             # # otherwise...
         s_bytelen = math.ceil(math.log2(13) * 256 * len(row) / 8)
-        return l + s.to_bytes(s_bytelen)
+        return l + s.to_bytes(s_bytelen,'big')
     
     def kemeleon_encode(self):
         sb = self.gsvcompression_encode()

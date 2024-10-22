@@ -164,7 +164,7 @@ class PolynomialKyber(Polynomial):
         for i in range(256):
             s += self.coeffs[i] * 3329 ** i
         bytelen = math.ceil(math.log2(3329) * 256 / 8)
-        return s.to_bytes(bytelen)
+        return s.to_bytes(bytelen,'big')
     
     def gsvcompression_encode_fast(self):
         s = 0
@@ -180,7 +180,7 @@ class PolynomialKyber(Polynomial):
         # otherwise...
         s_bytelen = math.ceil(math.log2(13) * 256 / 8)
         l_bytelen = math.ceil(math.log2(256) * 256 / 8)
-        return l.to_bytes(l_bytelen) + s.to_bytes(s_bytelen)
+        return l.to_bytes(l_bytelen,'big') + s.to_bytes(s_bytelen,'big')
 
     def _compress_ele(self, x, d):
         """

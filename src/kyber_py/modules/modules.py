@@ -32,13 +32,13 @@ class ModuleKyber(Module):
             )
 
         l_bytelen = self.ring.n * k
-        l = input_bytes[:l_bytelen]
+        # l = input_bytes[:l_bytelen]
         s = int.from_bytes(input_bytes[l_bytelen:])
         elements = []
         for i in range(k):
             coeffs = []
             for j in range(256):
-                coeffs.append((s % 13)*256 + (l[j+(i*256)]))
+                coeffs.append((s % 13)*256 + (input_bytes[j+(i*256)]))
                 s = s // 13
             poly = PolynomialRingKyber()
             elements.append(poly(coeffs,is_ntt=is_ntt))
@@ -92,11 +92,13 @@ class MatrixKyber(Matrix):
         l = bytearray(len(self._data[0]) * 256)
         for row in self._data:
             for ele in row: # one ele is one polynomial
+                si = 0
                 for i in range(256):
                     if ele.coeffs[i] == 3328:
                         return None
-                    s += (ele.coeffs[i] >> 8) * 13 ** (i + (k*256))
+                    si += (ele.coeffs[i] >> 8) * 13 ** i
                     l[i + (k*256)] = (ele.coeffs[i] % 256)
+                s += si * (13 ** (k*256))
                 k += 1
             # # in rejection version:
             # # now check if msb of s is 1 and reject if so.

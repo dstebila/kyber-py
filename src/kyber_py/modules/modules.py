@@ -108,7 +108,7 @@ class MatrixKyber(Matrix):
     
     def kemeleon_encode(self):
         sb = self.gsvcompression_encode()
-        s = int.from_bytes(sb)
+        s = int.from_bytes(sb,'big')
         bl = math.ceil(math.log2(3329) * 256 * len(self._data[0]))
         if s >> (bl - 1) == 1:
             return None

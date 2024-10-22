@@ -110,7 +110,7 @@ class PolynomialRingKyber(PolynomialRing):
         return self(coeffs, is_ntt=is_ntt)
 
     def gsvcompression_decode(self, input_bytes, is_ntt=False):
-        s = int.from_bytes(input_bytes)
+        s = int.from_bytes(input_bytes,'big')
         coeffs = []
         for i in range(256):
             coeffs.append(s % 3329)
@@ -121,8 +121,8 @@ class PolynomialRingKyber(PolynomialRing):
         l_bytelen = math.ceil(math.log2(256) * 256 / 8)
         sbyt = input_bytes[l_bytelen:]
         lbyt = input_bytes[:l_bytelen]
-        s = int.from_bytes(sbyt)
-        l = int.from_bytes(lbyt)
+        s = int.from_bytes(sbyt,'big')
+        l = int.from_bytes(lbyt,'big')
 
         coeffs = []
         for i in range(256):
